@@ -2,7 +2,6 @@ import os
 import json
 import boto3
 from django.shortcuts import render
-from django.http import JsonResponse
 from .models import OrganicResult
 from serpapi import GoogleSearch
 
@@ -12,7 +11,6 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = os.environ.get('AWS_REGION')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
-
 def fetch_results(query):
     params = {
         "engine": "google_scholar",
@@ -21,14 +19,21 @@ def fetch_results(query):
     }
     search = GoogleSearch(params)
     try:
-        results = search.get_dict()["organic_results"]
+        response = search.get_dict()
+        print("API response:", response)  # 전체 응답 출력
+        results = response.get("organic_results", [])
+        if not results:
+            print("No organic results found.")
     except Exception as e:
         print("An error occurred while fetching results:", e)
         results = []
     return results
 
-
 def upload_to_s3(data, file_name):
+    if not data:
+        print("No data to upload.")
+        return
+
     s3 = boto3.client(
         's3',
         aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -36,10 +41,10 @@ def upload_to_s3(data, file_name):
         region_name=AWS_REGION
     )
     temp_file_path = f"/tmp/{file_name}"
-    with open(temp_file_path, 'w') as file:
-        json.dump(data, file)
-
     try:
+        with open(temp_file_path, 'w') as file:
+            json.dump(data, file)
+
         s3.upload_file(temp_file_path, BUCKET_NAME, file_name)
         print(f"File uploaded successfully to s3://{BUCKET_NAME}/{file_name}")
     except Exception as e:
@@ -53,7 +58,7 @@ def search_view(request):
     if request.method == 'GET':
         query = request.GET.get('query')
         if not query:
-            return JsonResponse({'error': 'Query parameter is required'}, status=400)
+            return render(request, 'template/searchapp/index.html', {'error': 'Query parameter is required'})
 
         results = fetch_results(query)
         for result in results:
@@ -66,5 +71,5 @@ def search_view(request):
             )
 
         upload_to_s3(results, f"{query}_results.json")
-        return JsonResponse({'message': 'Results saved and uploaded successfully'})
-    return JsonResponse({'error': 'Invalid request method'}, status=405)
+        return render(request, 'template/results.html', {'results': results, 'query': query})
+    return render(request, 'template/searchapp/index.html', {'error': 'Invalid request method'})
