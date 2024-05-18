@@ -1,5 +1,6 @@
 import os
 import json
+import time
 import boto3
 from django.shortcuts import render
 from .models import OrganicResult
@@ -15,19 +16,33 @@ def fetch_results(query):
     params = {
         "engine": "google_scholar",
         "q": query,
-        "api_key": API_KEY
+        "api_key": API_KEY,
+        "num": 100,
     }
-    search = GoogleSearch(params)
-    try:
-        response = search.get_dict()
-        print("API response:", response)  # 전체 응답 출력
-        results = response.get("organic_results", [])
-        if not results:
-            print("No organic results found.")
-    except Exception as e:
-        print("An error occurred while fetching results:", e)
-        results = []
+    results = []
+    total_results = float('inf')
+    while len(results) < total_results:
+        search = GoogleSearch(params)
+        try:
+            response = search.get_dict()
+            print("API response:", response)  # 전체 응답 출력
+            new_results = response.get("organic_results", [])
+            if not new_results:
+                print("No organic results found.")
+                break
+            results.extend(new_results)
+            total_results = response.get("search_information", {}).get("total_results", 0)
+            print(f"Total results: {total_results}")
+            params["start"] = len(results) + 1
+        except Exception as e:
+            print("An error occurred while fetching results:", e)
+            break
+        time.sleep(0.5)
     return results
+
+def summarize_text(text):
+    summary = summarizer(text, max_length=130, min_length=20, do_sample=False)
+    return summary[0]['summary_text']
 
 def upload_to_s3(data, file_name):
     if not data:
@@ -52,7 +67,8 @@ def upload_to_s3(data, file_name):
 
 
 def index_view(request):
-    return render(request, 'template/searchapp/index.html')
+    results = OrganicResult.objects.all()
+    return render(request, 'template/searchapp/index.html', {'results': results})
 
 def search_view(request):
     if request.method == 'GET':
