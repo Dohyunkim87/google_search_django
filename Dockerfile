@@ -9,6 +9,7 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     libpq-dev \
     pkg-config \
+    libhdf5-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 작업 디렉토리를 /app으로 설정합니다.
