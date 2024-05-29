@@ -26,12 +26,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # 현재 디렉토리의 모든 파일을 컨테이너의 /app 디렉토리로 복사합니다.
 COPY . .
+COPY . /app/
 
 # static 파일을 모으는 명령어 실행
 RUN python manage.py collectstatic --noinput
 
 # 컨테이너 실행 시, gunicorn을 사용해 Django 애플리케이션을 실행합니다.
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "myproject.wsgi:application"]
+CMD ["gunicorn", "--bind", "0.0.0.0:8000", "google_search_django.wsgi:application"]
 
 # 포트 8000을 컨테이너 외부에 노출합니다.
 EXPOSE 8000
