@@ -13,12 +13,12 @@ AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
 AWS_REGION = os.environ.get('AWS_REGION')
 BUCKET_NAME = os.environ.get('BUCKET_NAME')
 
-def fetch_results(query, start_year=None, end_year=None, max_results=200):
+def fetch_results(query, start_year=None, end_year=None, max_results=20):
     params = {
         "engine": "google_scholar",
         "q": query,
         "api_key": API_KEY,
-        "num": 100,
+        "num": 10,
     }
 
     if start_year:
